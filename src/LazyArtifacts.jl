@@ -1,7 +1,7 @@
 module LazyArtifacts
 
 # reexport the Artifacts API
-using Artifacts: Artifacts,
+using Pkg.Artifacts: Artifacts,
        artifact_exists, artifact_path, artifact_meta, artifact_hash,
        find_artifacts_toml, @artifact_str
 export artifact_exists, artifact_path, artifact_meta, artifact_hash,
