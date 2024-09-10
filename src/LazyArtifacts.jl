@@ -12,6 +12,11 @@ export artifact_exists, artifact_path, artifact_meta, artifact_hash,
 using Base.BinaryPlatforms: AbstractPlatform, HostPlatform
 using Base: SHA1
 
+# We are mimicking Pkg.Artifacts.ensure_artifact_installed here so that we can
+# check if the artifact is already installed before loading Pkg.
+# Then if we need to load Pkg we do it in a subprocess to avoid precompilation
+# complexity.
+
 """
        ensure_artifact_installed(name::String, artifacts_toml::String;
                                    platform::AbstractPlatform = HostPlatform(),
