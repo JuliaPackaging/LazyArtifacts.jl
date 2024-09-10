@@ -48,20 +48,22 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
     if !artifact_exists(hash)
         # loading Pkg is a bit slow, so we only do it if we need to
         # and do it in a subprocess to avoid precompilation complexity
-        cmd = run(pipeline(`$(Base.julia_cmd()) -E '
-                Pkg = Base.require_stdlib(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"));
-                Pkg.try_artifact_download_sources(
-                    $(repr(name)),
-                    $(repr(hash)),
-                    $(repr(meta)),
-                    $(repr(artifacts_toml));
-                    platform = $(repr(platform)),
-                    verbose = $(repr(verbose)),
-                    quiet_download = $(repr(quiet_download)),
-                    io = $(repr(io))
-                )'`,
-            stderr=stderr))
-        return read(cmd, String)
+        code = """
+            Pkg = Base.require_stdlib(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"));
+            ret = Pkg.Artifacts.try_artifact_download_sources(
+                $(repr(name)),
+                Base.$(repr(hash)),
+                $(repr(meta)),
+                $(repr(artifacts_toml));
+                platform = Base.BinaryPlatforms.$(repr(platform)),
+                verbose = $(repr(verbose)),
+                quiet_download = $(repr(quiet_download)),
+                io = stderr
+            )
+            println(stdout, ret)
+        """
+        ret = String(readchomp(pipeline(`$(Base.julia_cmd()) -e $code`, stderr=io)))
+        return ret
     else
         return artifact_path(hash)
     end
