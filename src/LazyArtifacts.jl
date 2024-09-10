@@ -50,7 +50,7 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
         # and do it in a subprocess to avoid precompilation complexity
         code = """
             Pkg = Base.require_stdlib(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"));
-            ret = Pkg.Artifacts.try_artifact_download_sources(
+            Pkg.Artifacts.try_artifact_download_sources(
                 $(repr(name)),
                 Base.$(repr(hash)),
                 $(repr(meta)),
@@ -60,10 +60,9 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
                 quiet_download = $(repr(quiet_download)),
                 io = stderr
             )
-            println(stdout, ret)
         """
-        ret = String(readchomp(pipeline(`$(Base.julia_cmd()) -e $code`, stderr=io)))
-        return ret
+        out = readchomp(pipeline(`$(Base.julia_cmd()) -E $code`, stderr=io))
+        return Meta.parse(out)
     else
         return artifact_path(hash)
     end
