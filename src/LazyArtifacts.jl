@@ -73,4 +73,8 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
     end
 end
 
+if Base.generating_output()
+    precompile(Tuple{typeof(Artifacts._artifact_str), Module, String, Base.SubString{String}, String, Base.Dict{String, Any}, Base.SHA1, Base.BinaryPlatforms.Platform, Base.Val{LazyArtifacts}})
+end
+
 end
