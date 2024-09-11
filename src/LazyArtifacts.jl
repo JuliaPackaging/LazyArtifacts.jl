@@ -13,9 +13,7 @@ using Base.BinaryPlatforms: AbstractPlatform, HostPlatform
 using Base: SHA1
 
 # We are mimicking Pkg.Artifacts.ensure_artifact_installed here so that we can
-# check if the artifact is already installed before loading Pkg.
-# Then if we need to load Pkg we do it in a subprocess to avoid precompilation
-# complexity.
+# check if the artifact is already installed before loading Pkg, then load if needed.
 
 """
        ensure_artifact_installed(name::String, artifacts_toml::String;
@@ -54,7 +52,7 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
     if !artifact_exists(hash)
         # loading Pkg is a bit slow, so we only do it if we need to
         if Base.generating_output()
-            # if precompiling load and use Pkg in a subprocess to avoid precompilation complexity
+            # if precompiling, load and use Pkg in a subprocess to avoid precompilation complexity
             code = """
             Pkg = Base.require_stdlib($pkg_pkgid);
             Pkg.Artifacts.try_artifact_download_sources(
