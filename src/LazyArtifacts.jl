@@ -50,11 +50,13 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
     io::IO=stderr)
 
     hash = SHA1(meta["git-tree-sha1"])
+    pkg_pkgid = Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg")
     if !artifact_exists(hash)
         # loading Pkg is a bit slow, so we only do it if we need to
-        # and do it in a subprocess to avoid precompilation complexity
-        code = """
-            Pkg = Base.require_stdlib(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"));
+        if Base.generating_output()
+            # if precompiling load and use Pkg in a subprocess to avoid precompilation complexity
+            code = """
+            Pkg = Base.require_stdlib($pkg_pkgid);
             Pkg.Artifacts.try_artifact_download_sources(
                 $(repr(name)),
                 Base.$(repr(hash)),
@@ -65,9 +67,13 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
                 quiet_download = $(repr(quiet_download)),
                 io = stderr
             )
-        """
-        out = readchomp(pipeline(`$(Base.julia_cmd()) -E $code`, stderr=io))
-        return Meta.parse(out)
+            """
+            out = readchomp(pipeline(`$(Base.julia_cmd()) -E $code`, stderr=io))
+            return Meta.parse(out)
+        else
+            Pkg = Base.require_stdlib(pkg_pkgid);
+            return Pkg.Artifacts.try_artifact_download_sources(name, hash, meta, artifacts_toml; platform, verbose, quiet_download, io)
+        end
     else
         return artifact_path(hash)
     end
