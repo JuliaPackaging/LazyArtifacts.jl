@@ -72,7 +72,8 @@ function ensure_artifact_installed(name::String, meta::Dict, artifacts_toml::Str
             return Meta.parse(out)
         else
             Pkg = Base.require_stdlib(pkg_pkgid);
-            return Pkg.Artifacts.try_artifact_download_sources(name, hash, meta, artifacts_toml; platform, verbose, quiet_download, io)
+            return @invokelatest Pkg.Artifacts.try_artifact_download_sources(name, hash, meta, artifacts_toml;
+                                                platform, verbose, quiet_download, io)
         end
     else
         return artifact_path(hash)
