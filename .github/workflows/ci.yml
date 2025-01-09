@@ -1,45 +1,62 @@
 name: CI
-
 on:
   push:
-    branches: "main"
-    tags: ["*"]
+    branches:
+      - main
+      - 'release-*'
+    tags: ['*']
   pull_request:
-  release:
+  workflow_dispatch:
+
+concurrency:
+  # Skip intermediate builds: all builds except for builds on the `main` or `release-*` branches
+  # Cancel intermediate builds: only pull request builds
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.ref != 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') || github.run_number }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
   test:
-    name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ matrix.julia-arch }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        julia-version:
-          - "nightly"
         os:
           - ubuntu-latest
-        julia-arch:
-          - x64
+          - macos-13 # Intel
+          - windows-latest
+        arch:
+          - 'x64'
+          - 'x86'
+        version:
+          - '1.11' # compat
+          - 'nightly'
+        exclude:
+          - os: macos-13 # Intel
+            arch: x86
+        include:
+          # macos-latest -> Apple Silicon (Need julia >= v1.8)
+          - os: macos-latest
+            arch: 'aarch64'
+            version: '1.11'
+          - os: macos-latest
+            arch: 'aarch64'
+            version: 'nightly'
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.julia-version }}
-          arch: ${{ matrix.julia-arch }}
-      - name: Cache artifacts
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-artifacts
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v5
         with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
-      - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
-      - uses: julia-actions/julia-uploadcodecov@v0.1
-        continue-on-error: true
-      - uses: julia-actions/julia-uploadcoveralls@v0.1
-        continue-on-error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
