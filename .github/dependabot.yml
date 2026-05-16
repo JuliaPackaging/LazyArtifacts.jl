@@ -12,3 +12,9 @@ updates:
       - "/test"
     schedule:
       interval: "weekly"
+      ignore:
+      # Ignore package itself
+      - dependency-name: "LazyArtifacts"
+    groups:
+      per-dependency:
+        group-by: dependency-name
