@@ -14,6 +14,21 @@ mktempdir() do tempdir
     end
 end
 
+# `using LazyArtifacts` must not load Pkg; the first lazy download does
+@test success(run(setenv(`$(Base.julia_cmd()) --startup-file=no -e '
+    using LazyArtifacts, Test
+    pkg = Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg")
+    @test !haskey(Base.loaded_modules, pkg)
+    mktempdir() do tempdir
+        LazyArtifacts.Artifacts.with_artifacts_directory(tempdir) do
+            redirect_stderr(devnull) do
+                @test isdir(artifact"socrates")
+            end
+        end
+    end
+    @test haskey(Base.loaded_modules, pkg)'`,
+    dir=@__DIR__)))
+
 # Need to set depwarn flag before testing deprecations
 @test success(run(setenv(`$(Base.julia_cmd()) --depwarn=no --startup-file=no -e '
     using Artifacts, Pkg
