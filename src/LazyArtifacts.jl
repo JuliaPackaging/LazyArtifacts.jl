@@ -9,8 +9,10 @@ using Artifacts: Artifacts,
 export artifact_exists, artifact_path, artifact_meta, artifact_hash,
        select_downloadable_artifacts, find_artifacts_toml, @artifact_str
 
-# define a function for satisfying lazy Artifact downloads
-using Pkg.Artifacts: ensure_artifact_installed
+# define a function for satisfying lazy Artifact downloads. ArtifactDownloads is a small
+# stdlib, so it is loaded up front and the call stays static, which keeps this usable
+# under `--trim`.
+using ArtifactDownloads: ensure_artifact_installed
 
 # Precompile the `Val{LazyArtifacts}` flavour of `@artifact_str` dispatch so that
 # JLL packages using `using LazyArtifacts` don't pay codegen cost at `__init__`.
